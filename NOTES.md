@@ -14,3 +14,11 @@
     - Construct a prompt gpt 3-4 to answer the original user question using info contained in the returned strings from the vector db
 
     - Send result to user
+
+
+The nature of the document store is not provided, hence assuming it could be anything. So has to implement multiple 
+
+
+Challenges:
+    - Finding opensource solutions for embedding models, llm models etc which are fast and hardware friendly.
+    - [link] https://huggingface.co/spaces/mteb/leaderboard [link]

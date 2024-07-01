@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DOCUMENT_STORE=${DOCUMENT_STORE:-FAISS}
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    command: streamlit run docgpt/client/app.py
+    ports:
+      - "8501:8501"
+    depends_on:
+      - app

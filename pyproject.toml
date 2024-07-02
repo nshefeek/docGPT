@@ -18,6 +18,7 @@ dependencies = [
     "gpt4all>=2.7.0",
     "langchain-chroma>=0.1.2",
     "faiss-cpu>=1.8.0.post1",
+    "sklearn>=0.0.post12",
 ]
 requires-python = ">=3.12"
 readme = "README.md"

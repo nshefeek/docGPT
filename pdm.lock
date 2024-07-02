@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:2fe69acf3133f4ba459a5fcb462068fd31b46fb0ee35a1f927699f2f974d804d"
+content_hash = "sha256:57a342d0b05051c117a36983c5441a8fc909940b2cea9eabf54c734c53c4b3e1"
 
 [[package]]
 name = "aiohttp"
@@ -1906,6 +1906,15 @@ groups = ["default"]
 files = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
+]
+
+[[package]]
+name = "sklearn"
+version = "0.0.post12"
+summary = ""
+groups = ["default"]
+files = [
+    {file = "sklearn-0.0.post12.tar.gz", hash = "sha256:54cff9e20839b7b202321178228af4d9388bedf78425d9299fd9ee170d68802e"},
 ]
 
 [[package]]

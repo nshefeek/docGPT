@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File, Depends
 from fastapi.responses import FileResponse
 
 from docgpt.document_processor import DocumentProcessor
-from docgpt.qa_system import QASystem
+from docgpt.rag import RAGService
 from docgpt.models.question import Question
 from docgpt.document_stores.faiss_store import FAISSDocumentStore
 
@@ -21,7 +21,7 @@ def get_document_processor(document_store = Depends(get_document_store)):
 
 
 def get_qa_system(document_store = Depends(get_document_store)):
-    return QASystem(document_store)
+    return RAGService(document_store)
 
 
 @router.post("/upload")

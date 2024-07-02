@@ -14,6 +14,7 @@ class FAISSDocumentStore(BaseDocumentStore):
     def __init__(self) -> None:
         self.embeddings = OllamaEmbeddings(model="llama3")
         self.vector_store = None
+        self.document_count = 0
     
     async def add_documents(self, documents: List[Dict[str, Any]], batch_size: int = 1000):
         if not documents:
@@ -30,6 +31,8 @@ class FAISSDocumentStore(BaseDocumentStore):
                 self.vector_store = await FAISS.afrom_texts(texts, self.embeddings, metadatas=metadatas)
             else:
                 await self.vector_store.aadd_texts(texts, metadatas=metadatas)
+
+            self.document_count += len(documents)
 
             logger.info(f"Successfully loaded {len(documents)} documents to the store.")
         except Exception as e:
@@ -91,4 +94,9 @@ class FAISSDocumentStore(BaseDocumentStore):
 
     async def clear(self):
         self.vector_store = None
+        self.document_count = 0
         logger.info("Vector store cleared.")
+
+
+    async def get_document_count(self) -> int:
+        return self.document_count

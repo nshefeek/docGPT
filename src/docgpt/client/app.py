@@ -3,7 +3,7 @@ import streamlit as st
 
 # from docgpt.config import settings
 
-API_URL = "http://app:8000"
+API_URL = "http://localhost:8000"
 
 
 st.title("docGPT")
@@ -14,7 +14,7 @@ if uploaded_file is not None:
     response = httpx.post(f"{API_URL}/upload", files=files)
     if not response.status_code != 200:
         st.write("No answer found")
-        
+
     st.write(response.json()["message"])
 
 

@@ -4,7 +4,7 @@ from docgpt.api.routes import router
 from docgpt.config import settings
 
 
-app = FastAPI(title=settings.PROJECT_NAME)
+app = FastAPI(title="Untitled")
 
 app.add_middleware(
     CORSMiddleware,

@@ -7,14 +7,13 @@ from docgpt.document_processor import DocumentProcessor
 from docgpt.qa_system import QASystem
 from docgpt.models.question import Question
 from docgpt.document_stores.faiss_store import FAISSDocumentStore
-from docgpt.config import settings
+
 
 router = APIRouter()
 
 
 def get_document_store():
-    if settings.DOCUMENT_STORE == "FAISS":
-        return FAISSDocumentStore()
+    return FAISSDocumentStore()
 
 
 def get_document_processor(document_store = Depends(get_document_store)):
@@ -51,3 +50,16 @@ async def ask_question(
 async def get_document(filename: str):
     filepath = os.path.join("data", "documents", filename)
     return FileResponse(filepath)
+
+
+@router.post("/test_retrieval")
+async def test_retrieval(
+    question: Question,
+    document_store: FAISSDocumentStore = Depends(get_document_store)
+):
+    retriever = document_store.as_retriever(search_kwargs={"k": 4})
+    docs = retriever.get_relevant_documents(question.text)
+    return {
+        "num_docs": len(docs),
+        "docs": [{"content": doc.page_content[:200], "metadata": doc.metadata} for doc in docs]
+    }

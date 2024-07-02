@@ -6,7 +6,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - OLLAMA_URL=http://ollama:11434
       - DOCUMENT_STORE=${DOCUMENT_STORE:-FAISS}
     volumes:
       - ./data:/app/data
@@ -20,3 +21,13 @@ services:
       - "8501:8501"
     depends_on:
       - app
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  ollama_data:

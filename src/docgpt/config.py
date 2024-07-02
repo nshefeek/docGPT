@@ -2,10 +2,11 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "docGPT"
+    PROJECT_NAME: str = "Untitled"
     ALLOWED_HOSTS: list = ["*"]
     DOCUMENT_STORE: str = "FAISS"
-    OPENAI_API_KEY: str
+    OLLAMA_MODEL: str
+    OLLAMA_URL: str = "http://localhost:11434"
 
     class Config:
         env_file = ".env"

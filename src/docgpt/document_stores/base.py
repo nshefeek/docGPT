@@ -13,13 +13,5 @@ class BaseDocumentStore(ABC):
         pass
 
     @abstractmethod
-    def get_document(self, doc_id):
-        pass
-
-    @abstractmethod
-    def get_document_metadata(self, doc_id):
-        pass
-
-    @abstractmethod
     async def get_retriever(self, **kwargs):
         pass

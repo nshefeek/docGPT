@@ -1,65 +1,96 @@
-import os
+from typing import List, Dict, Any
 
-from fastapi import APIRouter, UploadFile, File, Depends
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 
-from docgpt.document_processor import DocumentProcessor
-from docgpt.rag import RAGService
 from docgpt.models.question import Question
-from docgpt.document_stores.faiss_store import FAISSDocumentStore
-
+from docgpt.models.answer import Answer
+from docgpt.models.task import Task
+from docgpt.models.search import DocumentSearch
+from docgpt.services.rag import RAGService
 
 router = APIRouter()
 
+async def get_rag_service():
+    return router.rag_service
 
-def get_document_store():
-    return FAISSDocumentStore()
+@router.post("/ask", response_model=Answer)
+async def ask_question(question: Question, rag_service: RAGService = Depends(get_rag_service)):
+    try:
+        result = await rag_service.ask_question(question.query)
+        return Answer(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/upload", response_model=Task)
+async def upload_document(file: UploadFile = File(...), rag_service: RAGService = Depends(get_rag_service)):
+    try:
+        file_path = f"uploads/{file.filename}"
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+        task_id = await rag_service.add_document(file_path)
+        return Task(**rag_service.get_task_status(task_id))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-def get_document_processor(document_store = Depends(get_document_store)):
-    return DocumentProcessor(document_store)
+@router.post("/process-directory", response_model=Task)
+async def process_directory(directory_path: str, rag_service: RAGService = Depends(get_rag_service)):
+    try:
+        task_id = await rag_service.add_directory(directory_path)
+        return Task(**rag_service.get_task_status(task_id))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/task/{task_id}", response_model=Task)
+async def get_task_status(task_id: str, rag_service: RAGService = Depends(get_rag_service)):
+    status = rag_service.get_task_status(task_id)
+    if "error" in status:
+        raise HTTPException(status_code=404, detail=status["error"])
+    return Task(**status)
 
-def get_qa_system(document_store = Depends(get_document_store)):
-    return RAGService(document_store)
+@router.post("/search", response_model=List[Dict[str, Any]])
+async def search_documents(search: DocumentSearch, rag_service: RAGService = Depends(get_rag_service)):
+    try:
+        return await rag_service.search_documents(search.query, search.k)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/save")
+async def save_document_store(file_path: str, rag_service: RAGService = Depends(get_rag_service)):
+    try:
+        await rag_service.save_document_store(file_path)
+        return {"message": "Document store saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/upload")
-async def upload_document(
-    file: UploadFile = File(...),
-    document_processor: DocumentProcessor = Depends(get_document_processor),
-):
-    content = await file.read()
-    document_processor.process_document(content, file.filename)
-    return {"message": "Document processed successfully"}
+@router.post("/load")
+async def load_document_store(file_path: str):
+    try:
+        global rag_service
+        rag_service = await RAGService.load_document_store(file_path)
+        return {"message": "Document store loaded successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/clear")
+async def clear_document_store(rag_service: RAGService = Depends(get_rag_service)):
+    try:
+        await rag_service.clear_document_store()
+        return {"message": "Document store cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/ask")
-async def ask_question(
-    question: Question,
-    qa_system: QASystem = Depends(get_qa_system),
-):
-    answer, source = qa_system.answer_questions(question.text)    
-    return {
-        "answer": answer,
-        "source": source,
-    }
+@router.get("/document-count")
+async def get_document_count(rag_service: RAGService = Depends(get_rag_service)):
+    try:
+        count = await rag_service.get_document_count()
+        return {"count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/document/{filename}")
-async def get_document(filename: str):
-    filepath = os.path.join("data", "documents", filename)
-    return FileResponse(filepath)
-
-
-@router.post("/test_retrieval")
-async def test_retrieval(
-    question: Question,
-    document_store: FAISSDocumentStore = Depends(get_document_store)
-):
-    retriever = document_store.as_retriever(search_kwargs={"k": 4})
-    docs = retriever.get_relevant_documents(question.text)
-    return {
-        "num_docs": len(docs),
-        "docs": [{"content": doc.page_content[:200], "metadata": doc.metadata} for doc in docs]
-    }
+@router.post("/clear-old-tasks")
+async def clear_old_tasks(max_age: int = 86400, rag_service: RAGService = Depends(get_rag_service)):
+    try:
+        await rag_service.clear_old_tasks(max_age)
+        return {"message": "Old tasks cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

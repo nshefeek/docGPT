@@ -23,6 +23,8 @@ Challenges:
     - Finding opensource solutions for embedding models, llm models etc which are fast and hardware friendly.
         - [link] https://huggingface.co/spaces/mteb/leaderboard [link]
     - Finding open source vector stores for storing the generated vector embeddings
+    - TextSplitter availabel not consistent with PDF documents
+    - 
 
 
 

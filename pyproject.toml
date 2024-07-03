@@ -18,7 +18,14 @@ dependencies = [
     "gpt4all>=2.7.0",
     "langchain-chroma>=0.1.2",
     "faiss-cpu>=1.8.0.post1",
-    "sklearn>=0.0.post12",
+    "scikit-learn>=1.5.0",
+    "sqlalchemy>=2.0.31",
+    "psycopg2>=2.9.9",
+    "sentence-transformers>=3.0.1",
+    "psutil>=6.0.0",
+    "langchain-huggingface>=0.0.3",
+    "nltk>=3.8.1",
+    "pymupdf>=1.24.7",
 ]
 requires-python = ">=3.12"
 readme = "README.md"

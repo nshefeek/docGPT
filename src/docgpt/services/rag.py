@@ -1,32 +1,37 @@
-import os
 import asyncio
 import logging
+import psutil
+
 import numpy as np
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
-from langchain.chains.qa_with_sources.retrieval import RetrievalQAWithSourcesChain
-from langchain_community.llms.ollama import Ollama
+from langchain.chains.retrieval_qa.base import RetrievalQA
+from langchain_community.llms.gpt4all import GPT4All
 from langchain.prompts import PromptTemplate
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from docgpt.document_processor import DocumentProcessor
+from docgpt.db import Database
+from docgpt.services.document_processor import DocumentProcessor
 from docgpt.document_stores.faiss_store import FAISSDocumentStore
 
 
 logger = logging.getLogger(__name__)
 
 class RAGService:
-    def __init__(self, model_name: str = "llama3"):
-        self.document_store = FAISSDocumentStore(model_name=model_name)
+    def __init__(self, model_name: str, db_url: str, index_path: str):
+        self.db = Database(db_url)
+        self.db.create_tables()
+        self.document_store = FAISSDocumentStore(model_name, self.db, index_path)
         self.document_processor = DocumentProcessor(self.document_store)
-        self.llm = Ollama(model=model_name)
+        self.llm = GPT4All(model="data/mistral-7b-openorca.gguf2.Q4_0.gguf")
 
         self.qa_template = """Use the following pieces of context to answer the question at the end. 
         If you don't know the answer, just say that you don't know, don't try to make up an answer.
+        Also try to keep the answer short and concise, not more than 100 words.
         
         {context}
         
@@ -66,14 +71,20 @@ class RAGService:
 
     async def ask_question(self, query: str) -> Dict[str, Any]:
         try:
-            retriever = await self.document_store.get_retriever(search_kwargs={"k": 4})
+            if await self.document_store.get_document_count() == 0:
+                return {
+                    "result": "No documents have been added to the knowledge base yet. Please add some documents before asking questions.",
+                    "sources": []
+                }
+            
+            retriever = self.document_store.get_retriever(kwargs={"k": 4})
             compressor = LLMChainExtractor.from_llm(self.llm)
             compression_retriever = ContextualCompressionRetriever(
                 base_compressor=compressor,
                 base_retriever=retriever,
             )
 
-            qa_chain = RetrievalQAWithSourcesChain.from_chain_type(
+            qa_chain = RetrievalQA.from_chain_type(
                 llm=self.llm,
                 chain_type="stuff",
                 retriever=compression_retriever,
@@ -81,22 +92,21 @@ class RAGService:
                 chain_type_kwargs={"prompt": self.qa_prompt}
             )
 
-            result = await qa_chain({"question": query})
-            context = [doc.page_content for doc in result["source_documents"]]
+            result = await asyncio.to_thread(qa_chain.invoke, {"query": query})
+            # context = [doc.page_content for doc in result["source_documents"]]
 
-            if not self.check_answer_relevance(result["answer"], context):
-                result["answer"] = "The question is not relevant to the available documents."
+            # if not self.check_answer_relevance(result["result"], context):
+            #     result["result"] = "The question is not relevant to the available documents."
             
             sources = [
                 {
-                    "content": doc.page_content,
+                    # "content": doc.page_content,
                     "metadata": doc.metadata
                 } for doc in result["source_documents"]
             ]
 
-            
             return {
-                "answer": result["answer"],
+                "result": result["result"],
                 "sources": sources,
             }
         except Exception as e:
@@ -108,6 +118,11 @@ class RAGService:
     
     async def save_document_stroe(self, file_path: str):
         await self.document_store.save(file_path)
+
+    @classmethod
+    async def create(cls, model_name: str, db_url: str, index_path: str):
+        instance = cls(model_name, db_url, index_path)
+        return instance
 
     @classmethod
     async def load_document_store(cls, file_path: str, model_name: str = "llama3"):

@@ -2,18 +2,22 @@ import logging
 from typing import List, Dict, Any
 
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
 
+from docgpt.db import Database
 from docgpt.document_stores.base import BaseDocumentStore
 
 logger = logging.getLogger(__name__)
 
+
 class FAISSDocumentStore(BaseDocumentStore):
     
-    def __init__(self) -> None:
-        self.embeddings = OllamaEmbeddings(model="llama3")
+    def __init__(self, model_name: str, database: Database, index_path: str = "faiss_index") -> None:
+        self.embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
         self.vector_store = None
+        self.db = database
+        self.index_path = index_path
         self.document_count = 0
     
     async def add_documents(self, documents: List[Dict[str, Any]], batch_size: int = 1000):
@@ -51,7 +55,7 @@ class FAISSDocumentStore(BaseDocumentStore):
                 {
                     "content": doc.page_content,
                     "metadata": doc.metadata,
-                    "score": score
+                    "score": float(score)
                 } for doc, score in results
             ]
         
@@ -59,12 +63,13 @@ class FAISSDocumentStore(BaseDocumentStore):
             logger.error(f"Error during search: {str(e)}")
             raise
     
-    async def get_retriever(self, **kwargs):
+    def get_retriever(self, **kwargs):
         try:
             if self.vector_store is None:
                 logger.info("Initializing empty vector store for retriever.")
                 empty_doc = Document(page_content="", metadata={})
-                self.vector_store = FAISS.afrom_documents([empty_doc], self.embeddings)
+                self.vector_store = FAISS.from_documents([empty_doc], self.embeddings)
+                self.document_count = 0
             return self.vector_store.as_retriever(**kwargs)
         except Exception as e:
             logger.error(f"Error getting retriever: {str(e)}")
@@ -82,11 +87,11 @@ class FAISSDocumentStore(BaseDocumentStore):
             raise
 
     @classmethod
-    async def load(cls, file_path: str):
+    async def load(cls, model_name: str, database: Database, index_path: str):
         try:
-            instance = cls()
-            instance.vector_store = await FAISS.load_local(file_path, instance.embeddings)
-            logger.info(f"Vector store load from {file_path}")
+            instance = cls(model_name, database, index_path)
+            # instance.vector_store = await FAISS.load_local(index_path, instance.embeddings)
+            # logger.info(f"Vector store load from {index_path}")
             return instance
         except Exception as e:
             logger.error(f"Error loading vector store: {str(e)}")

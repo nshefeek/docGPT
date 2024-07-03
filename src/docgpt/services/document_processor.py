@@ -3,10 +3,11 @@ import uuid
 import asyncio
 import logging
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List
 
+from langchain.schema import Document
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, TextLoader, CSVLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from docgpt.document_stores.base import BaseDocumentStore
 from docgpt.models.task import Task, TaskStatus
@@ -14,10 +15,30 @@ from docgpt.models.task import Task, TaskStatus
 
 logger = logging.getLogger(__name__)
 
+MARKDOWN_SEPARATORS = [
+    "\n#{1,6} ",
+    "```\n",
+    "\n\\*\\*\\*+\n",
+    "\n---+\n",
+    "\n___+\n",
+    "\n\n",
+    "\n",
+    " ",
+    "",
+]
+
 class DocumentProcessor:
-    def __init__(self, document_store: BaseDocumentStore):
+    def __init__(self, document_store: BaseDocumentStore, batch_size: int = 100):
         self.document_store = document_store
-        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len,
+            add_start_index=True,
+            strip_whitespace=True,
+            separators=MARKDOWN_SEPARATORS,
+        )
+        self.batch_size = batch_size
         self.tasks = {}
 
     async def process_file(self, file_path: str) -> str:
@@ -52,18 +73,31 @@ class DocumentProcessor:
         task.updated_at = datetime.now()
 
         try:
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"File not found: {file_path}")
+            
             _, file_extension = os.path.splitext(file_path)
-            if file_extension.lower() == ".pdf":
+            file_extension = file_extension.lower()
+
+            if file_extension == ".pdf":
                 loader = PyPDFLoader(file_path)
-            elif file_extension.lower() == ".txt":
+            elif file_extension == ".txt":
                 loader = TextLoader(file_path)
-            elif file_extension.lower() == "csv":
+            elif file_extension == "csv":
                 loader = CSVLoader(file_path)
             else:
                 raise ValueError(f"Unsupported file type: {file_extension}")
-        
-            documents = await asyncio.to_thread(loader.load)
-            await self._process_documents(documents, file_path, task_id)
+            
+            logger.info(f"Loading file: {file_path}")
+
+            try:
+                documents = await asyncio.to_thread(loader.load)
+            except Exception as e:
+                logger.error(f"Error loading file {file_path}: {str(e)}")
+                raise
+
+            logger.info(f"File loaded successfully: {file_path}")
+            await self._process_documents(documents, file_path)
 
             task.status = TaskStatus.COMPLETED
             task.progress = 1.0
@@ -85,18 +119,16 @@ class DocumentProcessor:
             loader = DirectoryLoader(
                 directory_path,
                 glob="**/*.*",
-                loader_cls={
-                    ".pdf": PyPDFLoader,
-                    ".txt": TextLoader,
-                    ".csv": CSVLoader,
-                }
+                use_multithreading=True,
+                loader_cls=TextLoader,
             )
 
             documents = await asyncio.to_thread(loader.load)
             total_docs = len(documents)
 
             for i, doc in enumerate(documents):
-                await self._process_documents([doc], doc.metadata.get("source"), task_id)
+                source = doc.metadata.get("source", str(doc.metadata))
+                await self._process_documents([doc], source)
                 task.progress = (i + 1) / total_docs
                 task.updated_at = datetime.now()
             
@@ -111,8 +143,10 @@ class DocumentProcessor:
         finally:
             task.updated_at = datetime.now()
 
-    async def _process_documents(self, documents, source):
+    async def _process_documents(self, documents: List[Document], source: str):
         try:
+            
+            logger.info(f"Starting to process {len(documents)} documents from source: {source}")
             texts = await asyncio.to_thread(self.text_splitter.split_documents, documents)
 
             docs_to_add = []
@@ -120,15 +154,18 @@ class DocumentProcessor:
                 metadata = doc.metadata.copy()
                 metadata.update({
                     "source": source,
-                    "page": doc.metadata.get("page", 1),
+                    "page": metadata.get("page", 1),
                     "paragraph": i + 1,
                 })
+
                 docs_to_add.append({
                     "content": doc.page_content,
                     "metadata": metadata,
                 })
+            for i in range(0, len(docs_to_add), self.batch_size):
+                batch = docs_to_add[i:i+self.batch_size]
+                await self.document_store.add_documents(batch)
 
-            await asyncio.to_thread(self.document_store.add_documents, texts)
             logger.info(f"Added {len(docs_to_add)} documents to the store from source: {source}")
         except Exception as e:
             logger.error(f"Error processing documents {source}: {str(e)}")

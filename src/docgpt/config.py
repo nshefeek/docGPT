@@ -5,9 +5,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Untitled"
     ALLOWED_HOSTS: list = ["*"]
     DOCUMENT_STORE: str = "FAISS"
-    OLLAMA_MODEL: str
-    OLLAMA_URL: str = "http://localhost:11434"
-    DATABASE_URI: str
+    LLM_MODEL: str
+    EMBEDDING_MODEL: str
+    UPLOAD_DIR: str
 
     class Config:
         env_file = ".env"

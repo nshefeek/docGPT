@@ -8,10 +8,10 @@ RUN pdm install --no-editable
 
 
 COPY /src .
+COPY /scripts ./
 
 ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
-EXPOSE 8501
 
 CMD ["uvicorn", "docgpt.main:app", "--host", "0.0.0.0", "--port", "8000"]

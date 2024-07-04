@@ -6,7 +6,12 @@ from datetime import datetime
 from typing import List
 
 from langchain.schema import Document
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, TextLoader, CSVLoader
+from langchain_community.document_loaders import (
+    DirectoryLoader,
+    PyPDFLoader,
+    TextLoader,
+    CSVLoader,
+)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from docgpt.document_stores.base import BaseDocumentStore
@@ -26,6 +31,7 @@ MARKDOWN_SEPARATORS = [
     " ",
     "",
 ]
+
 
 class DocumentProcessor:
     def __init__(self, document_store: BaseDocumentStore, batch_size: int = 100):
@@ -53,7 +59,7 @@ class DocumentProcessor:
 
         asyncio.create_task(self._process_file(file_path, task_id))
         return task_id
-    
+
     async def process_directory(self, directory_path: str) -> str:
         task_id = str(uuid.uuid4())
         task = Task(
@@ -66,7 +72,7 @@ class DocumentProcessor:
 
         asyncio.create_task(self._process_directory(directory_path, task_id))
         return task_id
-    
+
     async def _process_file(self, file_path: str, task_id: str):
         task = self.tasks[task_id]
         task.status = TaskStatus.IN_PROGRESS
@@ -75,7 +81,7 @@ class DocumentProcessor:
         try:
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"File not found: {file_path}")
-            
+
             _, file_extension = os.path.splitext(file_path)
             file_extension = file_extension.lower()
 
@@ -87,7 +93,7 @@ class DocumentProcessor:
                 loader = CSVLoader(file_path)
             else:
                 raise ValueError(f"Unsupported file type: {file_extension}")
-            
+
             logger.info(f"Loading file: {file_path}")
 
             try:
@@ -129,9 +135,9 @@ class DocumentProcessor:
             for i, doc in enumerate(documents):
                 source = doc.metadata.get("source", str(doc.metadata))
                 await self._process_documents([doc], source)
-                task.progress = (i + 1) / total_docs
+                task.progress = ((i + 1) / total_docs) * 100
                 task.updated_at = datetime.now()
-            
+
             task.status = TaskStatus.COMPLETED
             task.progress = 1.0
             task.details = f"Processed directory: {directory_path}"
@@ -145,39 +151,50 @@ class DocumentProcessor:
 
     async def _process_documents(self, documents: List[Document], source: str):
         try:
-            
-            logger.info(f"Starting to process {len(documents)} documents from source: {source}")
-            texts = await asyncio.to_thread(self.text_splitter.split_documents, documents)
+            logger.info(
+                f"Starting to process {len(documents)} documents from source: {source}"
+            )
+            texts = await asyncio.to_thread(
+                self.text_splitter.split_documents, documents
+            )
 
             docs_to_add = []
             for i, doc in enumerate(texts):
                 metadata = doc.metadata.copy()
-                metadata.update({
-                    "source": source,
-                    "page": metadata.get("page", 1),
-                    "paragraph": i + 1,
-                })
+                metadata.update(
+                    {
+                        "source": source,
+                        "page": metadata.get("page", 1),
+                        "paragraph": i + 1,
+                    }
+                )
 
-                docs_to_add.append({
-                    "content": doc.page_content,
-                    "metadata": metadata,
-                })
+                docs_to_add.append(
+                    {
+                        "content": doc.page_content,
+                        "metadata": metadata,
+                    }
+                )
             for i in range(0, len(docs_to_add), self.batch_size):
-                batch = docs_to_add[i:i+self.batch_size]
+                batch = docs_to_add[i : i + self.batch_size]
                 await self.document_store.add_documents(batch)
 
-            logger.info(f"Added {len(docs_to_add)} documents to the store from source: {source}")
+            logger.info(
+                f"Added {len(docs_to_add)} documents to the store from source: {source}"
+            )
         except Exception as e:
             logger.error(f"Error processing documents {source}: {str(e)}")
             raise
-    
+
     def get_task_status(self, task_id: str) -> Task:
         return self.tasks.get(task_id)
-    
+
     async def clear_tasks(self, max_age: int = 86400):
         current_time = datetime.now()
         tasks_to_remove = [
-            task_id for task_id, task in self.tasks.items() if (current_time -task.updated_at).total_seconds() > max_age
+            task_id
+            for task_id, task in self.tasks.items()
+            if (current_time - task.updated_at).total_seconds() > max_age
         ]
         for task_id in tasks_to_remove:
             del self.tasks[task_id]

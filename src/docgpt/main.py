@@ -9,14 +9,12 @@ from docgpt.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    db_url = settings.DATABASE_URI
     index_path = "faiss_store"
-    model_name = settings.OLLAMA_MODEL
-    rag_service = await RAGService.create(model_name, db_url, index_path)
-    
+    model_name = settings.LLM_MODEL
+    rag_service = await RAGService.create(model_name, index_path)
     router.rag_service = rag_service
-
     yield
+
 
 app = FastAPI(title="Untitled", lifespan=lifespan)
 

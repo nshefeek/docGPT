@@ -2,32 +2,30 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile.app
     ports:
       - "8000:8000"
     environment:
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
-      - OLLAMA_URL=http://ollama:11434
       - DOCUMENT_STORE=${DOCUMENT_STORE:-FAISS}
+      - LLM_MODEL=${LLM_MODEL:-orca-mini-3b-gguf2-q4_0.gguf}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
     volumes:
       - ./data:/app/data
+    command: >
+      sh -c "python download_models.py &&
+             uvicorn docgpt.main:app --host 0.0.0.0 --port 8000"
 
   frontend:
     build: 
       context: .
-      dockerfile: Dockerfile
-    command: streamlit run docgpt/client/app.py
+      dockerfile: Dockerfile.client
+    command: streamlit run app.py
     ports:
       - "8501:8501"
+    environment:
+      - BACKEND_URL=http://app:8000
+      - WS_URL=ws://app:8000
     depends_on:
       - app
-
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-
-volumes:
-  ollama_data:

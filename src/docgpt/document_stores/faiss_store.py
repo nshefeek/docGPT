@@ -2,37 +2,40 @@ import logging
 from typing import List, Dict, Any
 
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.gpt4all import GPT4AllEmbeddings
 from langchain.schema import Document
 
-from docgpt.db import Database
 from docgpt.document_stores.base import BaseDocumentStore
 
 logger = logging.getLogger(__name__)
 
 
 class FAISSDocumentStore(BaseDocumentStore):
-    
-    def __init__(self, model_name: str, database: Database, index_path: str = "faiss_index") -> None:
-        self.embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
+    def __init__(
+        self, model_name: str, index_path: str = "faiss_index"
+    ) -> None:
+        self.embeddings = GPT4AllEmbeddings(model_name="all-MiniLM-L6-v2.gguf2.f16.gguf")
         self.vector_store = None
-        self.db = database
         self.index_path = index_path
         self.document_count = 0
-    
-    async def add_documents(self, documents: List[Dict[str, Any]], batch_size: int = 1000):
+
+    async def add_documents(
+        self, documents: List[Dict[str, Any]], batch_size: int = 1000
+    ):
         if not documents:
             logger.warning("Attemped to add empty document list.")
-            return 
-        
+            return
+
         try:
             for i in range(0, len(documents), batch_size):
-                batch = documents[i:i+batch_size]
+                batch = documents[i : i + batch_size]
                 texts = [doc["content"] for doc in batch]
                 metadatas = [doc["metadata"] for doc in batch]
-        
+
             if self.vector_store is None:
-                self.vector_store = await FAISS.afrom_texts(texts, self.embeddings, metadatas=metadatas)
+                self.vector_store = await FAISS.afrom_texts(
+                    texts, self.embeddings, metadatas=metadatas
+                )
             else:
                 await self.vector_store.aadd_texts(texts, metadatas=metadatas)
 
@@ -47,7 +50,7 @@ class FAISSDocumentStore(BaseDocumentStore):
         if self.vector_store is None:
             logger.error("Attempted search on empty vector store.")
             raise ValueError("No documents have been added to the store yet.")
-        
+
         try:
             results = await self.vector_store.asimilarity_search_with_score(query, k=k)
 
@@ -55,14 +58,15 @@ class FAISSDocumentStore(BaseDocumentStore):
                 {
                     "content": doc.page_content,
                     "metadata": doc.metadata,
-                    "score": float(score)
-                } for doc, score in results
+                    "score": float(score),
+                }
+                for doc, score in results
             ]
-        
+
         except Exception as e:
             logger.error(f"Error during search: {str(e)}")
             raise
-    
+
     def get_retriever(self, **kwargs):
         try:
             if self.vector_store is None:
@@ -74,7 +78,7 @@ class FAISSDocumentStore(BaseDocumentStore):
         except Exception as e:
             logger.error(f"Error getting retriever: {str(e)}")
             raise
-    
+
     async def save(self, file_path: str):
         if self.vector_store is None:
             logger.error("Attempted to save empty vector store")
@@ -87,9 +91,9 @@ class FAISSDocumentStore(BaseDocumentStore):
             raise
 
     @classmethod
-    async def load(cls, model_name: str, database: Database, index_path: str):
+    async def load(cls, model_name: str, index_path: str):
         try:
-            instance = cls(model_name, database, index_path)
+            instance = cls(model_name, index_path)
             # instance.vector_store = await FAISS.load_local(index_path, instance.embeddings)
             # logger.info(f"Vector store load from {index_path}")
             return instance
@@ -101,7 +105,6 @@ class FAISSDocumentStore(BaseDocumentStore):
         self.vector_store = None
         self.document_count = 0
         logger.info("Vector store cleared.")
-
 
     async def get_document_count(self) -> int:
         return self.document_count

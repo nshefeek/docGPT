@@ -12,7 +12,7 @@ This is a Retrieval-Augmented Generation (RAG) system powered by Langchain, Lang
 
 1. Clone the repository: 
 ```
-code git clone https://github.com/yourusername/docGPT.git
+git clone https://github.com/nshefeek/docGPT.git
 cd docGPT
 ```
 2. Place the LLM model file (`mistral-7b-openorca.gguf2.Q4_0.gguf`) in the `data` directory.

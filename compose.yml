@@ -10,7 +10,7 @@ services:
     environment:
       - DOCUMENT_STORE=${DOCUMENT_STORE:-FAISS}
       - LLM_MODEL=${LLM_MODEL:-orca-mini-3b-gguf2-q4_0.gguf}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2.gguf2.f16.gguf}
       - UPLOAD_DIR=${UPLOAD_DIR:-uploads}
     volumes:
       - ./data:/app/data

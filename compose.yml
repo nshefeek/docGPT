@@ -11,11 +11,14 @@ services:
       - DOCUMENT_STORE=${DOCUMENT_STORE:-FAISS}
       - LLM_MODEL=${LLM_MODEL:-orca-mini-3b-gguf2-q4_0.gguf}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+      - UPLOAD_DIR=${UPLOAD_DIR:-uploads}
     volumes:
       - ./data:/app/data
+      - ./faiss_store:/app/faiss_store
     command: >
       sh -c "python download_models.py &&
              uvicorn docgpt.main:app --host 0.0.0.0 --port 8000"
+    restart: always
 
   frontend:
     build: 
@@ -27,5 +30,6 @@ services:
     environment:
       - BACKEND_URL=http://app:8000
       - WS_URL=ws://app:8000
+    restart: always
     depends_on:
       - app

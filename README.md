@@ -1,6 +1,6 @@
 # docGPT
 
-This is a Retrieval-Augmented Generation (RAG) system powered by Langchain, Langchain Community, FAISS document store, and LLAMA3 model from Ollama. It allows users to ask questions about uploaded documents and receive short, precise, and well-sourced answers.
+This is a Retrieval-Augmented Generation (RAG) system powered by Langchain, Langchain Community, FAISS document store, and GPT4All. It allows users to ask questions about uploaded documents and receive short, precise, and well-sourced answers.
 
 ## Prerequisites
 
@@ -15,9 +15,7 @@ This is a Retrieval-Augmented Generation (RAG) system powered by Langchain, Lang
 git clone https://github.com/nshefeek/docGPT.git
 cd docGPT
 ```
-2. Place the LLM model file (`mistral-7b-openorca.gguf2.Q4_0.gguf`) in the `data` directory.
-
-3. Build and run the Docker containers:
+2. Build and run the Docker containers:
 ```
 docker-compose up --build
 ```

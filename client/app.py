@@ -1,3 +1,10 @@
+"""
+app.py
+
+This module implements the Streamlit frontend for the RAG (Retrieval-Augmented Generation) system.
+It provides a user interface for uploading documents, processing directories, and asking questions.
+The app communicates with the backend server using WebSocket connections for real-time updates.
+"""
 import asyncio
 import streamlit as st
 import httpx
@@ -9,8 +16,9 @@ from websockets import connect
 from websockets.exceptions import ConnectionClosedError
 
 
-BACKEND_URL = os.environ.get("BACKEND_URL")
-WS_URL = os.environ.get("WS_URL")
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
+WS_URL = os.environ.get("WS_URL", "ws://localhost:8000")
+
 
 def upload_file(file: bytes, filename: str) -> Dict:
     try:
@@ -21,13 +29,17 @@ def upload_file(file: bytes, filename: str) -> Dict:
         st.error(f"Upload request failed: {str(e)}")
         return {"error": str(e)}
 
+
 def process_directory(directory_path: str) -> Dict:
     try:
-        response = httpx.post(f"{BACKEND_URL}/process-directory", json={"directory_path": directory_path})
+        response = httpx.post(
+            f"{BACKEND_URL}/process-directory", json={"directory_path": directory_path}
+        )
         return response.json()
     except httpx.RequestError as e:
         st.error(f"Directory processing request failed: {str(e)}")
         return {"error": str(e)}
+
 
 def get_task_status(task_id: str) -> Dict:
     try:
@@ -37,6 +49,7 @@ def get_task_status(task_id: str) -> Dict:
         st.error(f"Task status request failed: {str(e)}")
         return {"error": str(e)}
 
+
 def search_documents(query: str, k: int = 4) -> Dict:
     try:
         response = httpx.post(f"{BACKEND_URL}/search", json={"query": query, "k": k})
@@ -44,6 +57,7 @@ def search_documents(query: str, k: int = 4) -> Dict:
     except httpx.RequestError as e:
         st.error(f"Document search request failed: {str(e)}")
         return {"error": str(e)}
+
 
 def get_document_count() -> Dict:
     try:
@@ -53,9 +67,12 @@ def get_document_count() -> Dict:
         st.error(f"Document count request failed: {str(e)}")
         return {"error": str(e)}
 
+
 async def ask_question(question: str):
     try:
-        async with connect(f"{WS_URL}/ws/ask", timeout=120, ping_interval=30, ping_timeout=10) as websocket:
+        async with connect(
+            f"{WS_URL}/ws/ask", timeout=120, ping_interval=30, ping_timeout=10
+        ) as websocket:
             await websocket.send(question)
             while True:
                 response = await websocket.recv()
@@ -65,13 +82,24 @@ async def ask_question(question: str):
     except ConnectionClosedError:
         yield {"error": "Question connection closed unexpectedly. Please try again."}
 
+
 def main():
     st.set_page_config(page_title="DocGPT", layout="wide")
     st.title("DocGPT - Document Processing and Question Answering")
 
     # Sidebar for navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Home", "Upload", "Process Directory", "Ask Questions", "Search Documents", "Task Status"])
+    page = st.sidebar.radio(
+        "Go to",
+        [
+            "Home",
+            "Upload",
+            "Process Directory",
+            "Ask Questions",
+            "Search Documents",
+            "Task Status",
+        ],
+    )
 
     if page == "Home":
         st.header("Welcome to DocGPT")
@@ -83,7 +111,7 @@ def main():
         st.header("Upload Document")
         uploaded_file = st.file_uploader("Choose a file", type=["pdf", "txt", "csv"])
         upload_button = st.button("Upload", disabled=uploaded_file is None)
-        
+
         if uploaded_file is not None:
             if upload_button:
                 with st.spinner("Uploading file..."):
@@ -93,12 +121,13 @@ def main():
                         st.error(result["error"])
                     else:
                         st.success(result)
-                    
 
     elif page == "Process Directory":
         st.header("Process Directory")
         directory_path = st.text_input("Enter the directory path", key="directory_path")
-        process_button = st.button("Process", disabled=(len(directory_path.strip()) == 0))
+        process_button = st.button(
+            "Process", disabled=(len(directory_path.strip()) == 0)
+        )
 
         if process_button:
             with st.spinner("Processing directory..."):
@@ -117,7 +146,7 @@ def main():
             answer_container = st.empty()
             sources_container = st.expander("Sources", expanded=False)
             elapsed_time_container = st.empty()
-            
+
             async def stream_answer():
                 full_answer = ""
                 start_time = asyncio.get_event_loop().time()
@@ -126,7 +155,9 @@ def main():
                         await websocket.send(question)
                         while True:
                             try:
-                                response = await asyncio.wait_for(websocket.recv(), timeout=0.1)
+                                response = await asyncio.wait_for(
+                                    websocket.recv(), timeout=0.1
+                                )
                                 response = eval(response)  # Convert string to dict
                                 if "error" in response:
                                     answer_container.error(response["error"])
@@ -137,15 +168,23 @@ def main():
                                     if response.get("sources"):
                                         sources_container.json(response["sources"])
                                         break
-                                
+
                                 # Update elapsed time
-                                elapsed_time = asyncio.get_event_loop().time() - start_time
-                                elapsed_time_container.text(f"Elapsed time: {elapsed_time:.2f} seconds")
+                                elapsed_time = (
+                                    asyncio.get_event_loop().time() - start_time
+                                )
+                                elapsed_time_container.text(
+                                    f"Elapsed time: {elapsed_time:.2f} seconds"
+                                )
 
                             except asyncio.TimeoutError:
                                 # This allows us to update the elapsed time while waiting for the next chunk
-                                elapsed_time = asyncio.get_event_loop().time() - start_time
-                                elapsed_time_container.text(f"Elapsed time: {elapsed_time:.2f} seconds")
+                                elapsed_time = (
+                                    asyncio.get_event_loop().time() - start_time
+                                )
+                                elapsed_time_container.text(
+                                    f"Elapsed time: {elapsed_time:.2f} seconds"
+                                )
                             except websockets.exceptions.ConnectionClosedError:
                                 break
                 except Exception as e:
@@ -153,7 +192,9 @@ def main():
                 finally:
                     # Display final elapsed time
                     elapsed_time = asyncio.get_event_loop().time() - start_time
-                    elapsed_time_container.text(f"Total response time: {elapsed_time:.2f} seconds")
+                    elapsed_time_container.text(
+                        f"Total response time: {elapsed_time:.2f} seconds"
+                    )
 
             with st.spinner("Preparing answer..."):
                 asyncio.run(stream_answer())
@@ -185,6 +226,7 @@ def main():
                 st.json(status)
             else:
                 st.error(status["error"])
+
 
 if __name__ == "__main__":
     main()

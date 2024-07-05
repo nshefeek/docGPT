@@ -1,3 +1,12 @@
+"""
+document_processor.py
+
+This module contains the DocumentProcessor class, which is responsible for handling
+the ingestion, processing, and storage of documents in the RAG system. It manages
+the conversion of various document types into a format suitable for vector storage
+and retrieval.
+"""
+
 import os
 import uuid
 import asyncio
@@ -34,7 +43,25 @@ MARKDOWN_SEPARATORS = [
 
 
 class DocumentProcessor:
+    """
+    DocumentProcessor class for handling document ingestion and processing.
+
+    Attributes:
+        document_store (BaseDocumentStore): The document store to add processed documents to.
+        text_splitter (RecursiveCharacterTextSplitter): Text splitter for chunking documents.
+        batch_size (int): Batch size for adding documents to the store.
+        tasks (dict): Dictionary to store processing tasks.
+    """
+
     def __init__(self, document_store: BaseDocumentStore, batch_size: int = 100):
+        """
+        Initialize the DocumentProcessor.
+
+        Args:
+            document_store (BaseDocumentStore): The document store to use.
+            batch_size (int, optional): Batch size for adding documents. Defaults to 100.
+        """
+
         self.document_store = document_store
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
@@ -48,6 +75,15 @@ class DocumentProcessor:
         self.tasks = {}
 
     async def process_file(self, file_path: str) -> str:
+        """
+        Process a single file and add it to the document store.
+
+        Args:
+            file_path (str): Path to the file to process.
+
+        Returns:
+            str: ID of the processing task.
+        """
         task_id = str(uuid.uuid4())
         task = Task(
             id=task_id,
@@ -61,6 +97,15 @@ class DocumentProcessor:
         return task_id
 
     async def process_directory(self, directory_path: str) -> str:
+        """
+        Process all documents in a directory and add them to the document store.
+
+        Args:
+            directory_path (str): Path to the directory containing documents.
+
+        Returns:
+            str: ID of the processing task.
+        """
         task_id = str(uuid.uuid4())
         task = Task(
             id=task_id,
@@ -74,6 +119,13 @@ class DocumentProcessor:
         return task_id
 
     async def _process_file(self, file_path: str, task_id: str):
+        """
+        Private method to process a single file.
+
+        Args:
+            file_path (str): Path to the file to process.
+            task_id (str): ID of the task processing this file.
+        """
         task = self.tasks[task_id]
         task.status = TaskStatus.IN_PROGRESS
         task.updated_at = datetime.now()
@@ -117,6 +169,13 @@ class DocumentProcessor:
             task.updated_at = datetime.now()
 
     async def _process_directory(self, directory_path, task_id):
+        """
+        Private method to process all documents in a directory.
+
+        Args:
+            directory_path (str): Path to the directory containing documents.
+            task_id (str): ID of the task processing this directory.
+        """
         task = self.tasks[task_id]
         task.status = TaskStatus.IN_PROGRESS
         task.updated_at = datetime.now()
@@ -125,8 +184,7 @@ class DocumentProcessor:
             loader = DirectoryLoader(
                 directory_path,
                 glob="**/*.*",
-                use_multithreading=True,
-                loader_cls=TextLoader,
+                loader_cls=PyPDFLoader,
             )
 
             documents = await asyncio.to_thread(loader.load)
@@ -150,6 +208,16 @@ class DocumentProcessor:
             task.updated_at = datetime.now()
 
     async def _process_documents(self, documents: List[Document], source: str):
+        """
+        Process a list of documents and add them to the document store.
+
+        Args:
+            documents (List[Document]): List of documents to process.
+            source (str): Source of the documents (e.g., file path).
+
+        Raises:
+            Exception: If there's an error processing the documents.
+        """
         try:
             logger.info(
                 f"Starting to process {len(documents)} documents from source: {source}"
@@ -187,9 +255,24 @@ class DocumentProcessor:
             raise
 
     def get_task_status(self, task_id: str) -> Task:
+        """
+        Get the status of a document processing task.
+
+        Args:
+            task_id (str): ID of the task to check.
+
+        Returns:
+            Task: The task object with current status, or None if not found.
+        """
         return self.tasks.get(task_id)
 
     async def clear_tasks(self, max_age: int = 86400):
+        """
+        Clear old tasks from the task list.
+
+        Args:
+            max_age (int, optional): Maximum age of tasks to keep, in seconds. Defaults to 86400 (24 hours).
+        """
         current_time = datetime.now()
         tasks_to_remove = [
             task_id

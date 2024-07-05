@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Untitled"
+    PROJECT_NAME: str = "docGPT"
     ALLOWED_HOSTS: list = ["*"]
     DOCUMENT_STORE: str = "FAISS"
     LLM_MODEL: str

@@ -10,8 +10,9 @@ from docgpt.config import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     index_path = "faiss_store"
-    model_name = settings.LLM_MODEL
-    rag_service = await RAGService.create(model_name, index_path)
+    llm_model = settings.LLM_MODEL
+    embedding_model = settings.EMBEDDING_MODEL
+    rag_service = await RAGService.create(llm_model, embedding_model, index_path)
     router.rag_service = rag_service
     yield
 

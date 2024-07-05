@@ -47,3 +47,6 @@ docker-compose up --build
 - `/clear-old-tasks` (POST): Clear old tasks from the task list.
 
 For detailed information on the request and response formats, refer to the API documentation.
+
+## Important Points 
+- If you are using `docker compose` instead of `docker-compose` the application startup would be done after the download of the LLM model into the `data` folder. So please wait for the backend application to start after the download is done.

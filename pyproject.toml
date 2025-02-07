@@ -1,0 +1,38 @@
+[project]
+name = "docgpt"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi[standard]>=0.115.8",
+    "llama-index-embeddings-huggingface>=0.5.1",
+    "llama-index>=0.12.15",
+    "pydantic-settings>=2.7.1",
+    "python-dotenv>=1.0.1",
+    "uvicorn>=0.34.0",
+    "llama-index-llms-llama-cpp>=0.4.0",
+    "elasticsearch>=8.17.1",
+    "llama-index-vector-stores-elasticsearch>=0.4.0",
+    "pymupdf>=1.25.3",
+]
+
+[dependency-groups]
+client = [
+    "httpx>=0.28.1",
+    "streamlit>=1.42.0",
+    "websockets>=14.2",
+]
+lint = [
+    "ruff>=0.9.4",
+]
+test = [
+    "pytest>=8.3.4",
+]
+
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+server = "docGPT.main:app"

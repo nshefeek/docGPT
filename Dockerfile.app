@@ -4,10 +4,11 @@ WORKDIR /app
 
 COPY pyproject.toml *.lock README.md ./
 COPY /src .
+COPY /scripts ./
 
 RUN pip install uv
 RUN uv venv .venv
-RUN uv pip install -e .
+RUN uv sync --no-group 
 
 ENV PATH="/app/.venv/bin:$PATH"
 

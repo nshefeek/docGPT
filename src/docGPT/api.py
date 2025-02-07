@@ -32,7 +32,7 @@ async def ask_question(
     rag_service: RAGServiceDep,
 ):
     try:
-        result = rag_service.ask_question(query)
+        result = await rag_service.ask_question(query)
         return result
 
     except Exception as e:
@@ -74,8 +74,18 @@ async def upload_directory(
     except Exception as e:
         logger.error(f"Error uploading directory {directory.directory_path}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
 
-@router.post("/clear_store")
+@router.post("/search")
+async def search_documents(
+    query: str,
+    rag_service: RAGServiceDep,
+    k: int = 4,
+):
+    return rag_service.document_indexer.search(query, k)
+
+
+@router.post("/clear-store")
 async def clear_store(
     rag_service: RAGServiceDep,
 ):
@@ -84,6 +94,15 @@ async def clear_store(
     except Exception as e:
         logger.error(f"Error clearing store: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+@router.get("/document-count")
+async def get_document_count(
+    rag_service: RAGServiceDep,
+):
+    return {
+        "count": rag_service.document_indexer.count_documents()
+    }
 
 
 @router.websocket("/ws/ask")

@@ -39,6 +39,18 @@ class DocumentIndexer:
             storage_context=self.storage_context,
         )
     
+    def search(self, query: str) -> List[Document]:
+        """
+        Searches for documents in the document store.
+        """
+        return self.get_index().query(query)
+    
+    def count_documents(self) -> int:
+        """
+        Returns the number of documents in the document store.
+        """
+        return len(self.store.get_all_documents())
+    
 
     def clear(self) -> None:
         """

@@ -8,11 +8,13 @@ services:
     volumes:
       - ./data:/app/data
       - ./model_cache:/app/model_cache
-    command: uvicorn docGPT.main:app --host 0.0.0.0 --port 8000
+    command: >
+      sh -c "python download_models.py && 
+            uvicorn docGPT.main:app --host 0.0.0.0 --port 8000 --workers 4 --loop asyncio --log-level info"
     networks:
       - share-network
     env_file:
-      - .env
+      - .env.docker
   
 
   elasticsearch:
@@ -41,6 +43,8 @@ services:
       interval: 30s
       retries: 10
       test: curl -s http://elasticsearch:9200/_cluster/health | grep -vq '"status":"red"'
+    env_file:
+      - .env.docker
 
   frontend:
     build: 
@@ -50,13 +54,15 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - BACKEND_URL=http://app:8000
+      - BACKEND_URL=http://app:8000/api
       - WS_URL=ws://app:8000
     restart: always
     depends_on:
       - app
     networks:
       - share-network
+    env_file:
+      - .env.docker
 
 volumes:
   elasticsearch_data:

@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     )
 
     Settings.llm = LlamaCPP(
-        model_url=settings.LLM_MODEL,
+        model_path=settings.LLM_MODEL,
         max_new_tokens=2048,
         temperature=0.7,
     )

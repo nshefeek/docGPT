@@ -23,7 +23,7 @@ WS_URL = os.environ.get("WS_URL", "ws://localhost:8000")
 def upload_file(file: bytes, filename: str) -> Dict:
     try:
         files = {"file": (filename, file, "application/octet-stream")}
-        response = httpx.post(f"{BACKEND_URL}/upload", files=files)
+        response = httpx.post(f"{BACKEND_URL}/upload/file", files=files)
         return response.json()
     except httpx.RequestError as e:
         st.error(f"Upload request failed: {str(e)}")
@@ -33,22 +33,12 @@ def upload_file(file: bytes, filename: str) -> Dict:
 def process_directory(directory_path: str) -> Dict:
     try:
         response = httpx.post(
-            f"{BACKEND_URL}/process-directory", json={"directory_path": directory_path}
+            f"{BACKEND_URL}/upload/directory", json={"directory_path": directory_path}
         )
         return response.json()
     except httpx.RequestError as e:
         st.error(f"Directory processing request failed: {str(e)}")
         return {"error": str(e)}
-
-
-def get_task_status(task_id: str) -> Dict:
-    try:
-        response = httpx.get(f"{BACKEND_URL}/task/{task_id}")
-        return response.json()
-    except httpx.RequestError as e:
-        st.error(f"Task status request failed: {str(e)}")
-        return {"error": str(e)}
-
 
 def search_documents(query: str, k: int = 4) -> Dict:
     try:
@@ -97,7 +87,6 @@ def main():
             "Process Directory",
             "Ask Questions",
             "Search Documents",
-            "Task Status",
         ],
     )
 
@@ -214,18 +203,6 @@ def main():
                     st.json(result["metadata"])
             else:
                 st.error("An error occurred during the search.")
-
-    elif page == "Task Status":
-        st.header("Task Status")
-        task_id = st.text_input("Enter task ID")
-        check_button = st.button("Check Status", disabled=not task_id)
-
-        if check_button:
-            status = get_task_status(task_id)
-            if "error" not in status:
-                st.json(status)
-            else:
-                st.error(status["error"])
 
 
 if __name__ == "__main__":

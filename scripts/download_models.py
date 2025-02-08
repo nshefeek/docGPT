@@ -1,9 +1,14 @@
 #! .venv/bin/python
-
 import os
 import requests
 from tqdm import tqdm
+from dotenv import load_dotenv
 
+load_dotenv()
+
+MODEL_PATH = os.environ.get("MODEL_PATH", "./model_cache/")
+LLM_MODEL = os.environ.get("LLM_MODEL", "Qwen2-VL-2B-Instruct-Q6_K.gguf")
+LLM_MODEL_URL = os.environ.get("LLM_MODEL_URL", "https://huggingface.co/bartowski/Qwen2-VL-2B-Instruct-GGUF/resolve/main/Qwen2-VL-2B-Instruct-Q6_K.gguf")
 
 def download_file(url, filename):
     response = requests.get(url, stream=True)
@@ -23,7 +28,7 @@ def download_file(url, filename):
 
 
 def ensure_model(model_name, url):
-    model_path = f"/model_cache/{model_name}"
+    model_path = f"{MODEL_PATH}{model_name}"
     if not os.path.exists(model_path):
         print(f"Downloading {model_name}...")
         download_file(url, model_path)
@@ -33,9 +38,10 @@ def ensure_model(model_name, url):
 
 
 # LLM Model
-llm_model = "Qwen2-VL-2B-Instruct-Q6_K.gguf"
-llm_url = "https://huggingface.co/bartowski/Qwen2-VL-2B-Instruct-GGUF/resolve/main/Qwen2-VL-2B-Instruct-Q6_K.gguf"
 
-ensure_model(llm_model, llm_url)
+def main():
+    ensure_model(LLM_MODEL, LLM_MODEL_URL)
+    print("All required models have been downloaded.")
 
-print("All required models have been downloaded.")
+if __name__ == "__main__":
+    main()

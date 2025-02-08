@@ -2,7 +2,7 @@ import logging
 
 from typing import Dict, Any, AsyncGenerator
 
-from llama_index.core import VectorStoreIndex
+from llama_index.core import VectorStoreIndex, Document
 from llama_index.core.indices.vector_store import VectorIndexRetriever
 from llama_index.core.query_engine import RetrieverQueryEngine
 from llama_index.core.postprocessor import SimilarityPostprocessor
@@ -72,7 +72,13 @@ class RAGService:
         try:
             index = self.document_indexer.get_index()
 
-            if not self.is_question_relevant(query, index):
+            retrieved_docs = self.document_indexer.store.search(query)
+
+            llama_docs = [
+                Document(text=doc.text, metadata={key: doc.metadata[key] for key in ["source", "page_number", "paragraph_number"]}) for doc in retrieved_docs
+            ]
+
+            if not llama_docs:
                 return {
                     "result": "I'm sorry, I don't know the answer to that question.",
                     "sources": [],
@@ -104,22 +110,33 @@ class RAGService:
         Generates a response to a query using the query engine.
         """
         response = await query_engine.aquery(query)
-        return response
 
-    def _parse_response(self, response):
+        if not hasattr(response, "source_nodes") or not hasattr(response, "response"):
+            raise Exception("Invalid response format")
+        
+        return {
+            "answer": response.response,
+            "sources": response.source_nodes,
+        }
+
+    def _parse_response(self, response: Dict):
         """
         Parses a response into an Answer object.
         """
 
         return {
-            "result": str(response),
+            "result": response["answer"],
             "sources": [
                 {
-                    "content": node.node.text,
-                    "metadata": node.node.metadata,
-                    "score": node.score
+                    "content": node.node.text.strip(),
+                    "metadata": {
+                        "source": node.node.metadata.get("source", "Unknown"),
+                        "page_number": node.node.metadata.get("page_number", "N/A"),
+                        "paragraph_number": node.node.metadata.get("paragraph_number", "N/A"),
+                    },
+                    "score": round(node.score, 3)
                 }
-                for node in response.source_nodes
+                for node in response["sources"]
             ]
         }
 
@@ -146,13 +163,3 @@ class RAGService:
                 "sources": [],
                 "progress": 1.0
             }
-
-    @staticmethod
-    def is_question_relevant(query: str, index: VectorStoreIndex, threshold: float = 0.7) -> bool:
-        """
-        Checks if a question is relevant to the index.
-        """
-        retriever = VectorIndexRetriever(index=index, similarity_top_k=5)
-        responses = retriever.retrieve(query)
-
-        return any(response.score >= threshold for response in responses)

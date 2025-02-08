@@ -84,7 +84,7 @@ async def search_documents(
     query: str,
     rag_service: RAGServiceDep
 ):
-    result = rag_service.document_indexer.search(query)
+    result = rag_service.document_indexer.store.search(query)
     return result
 
 
@@ -93,7 +93,7 @@ async def clear_store(
     rag_service: RAGServiceDep,
 ):
     try:
-        rag_service.document_indexer.clear()
+        rag_service.document_indexer.store.clear()
         return {"status": "success"}
     except Exception as e:
         logger.error(f"Error clearing store: {e}")
@@ -105,7 +105,7 @@ async def get_document_count(
     rag_service: RAGServiceDep,
 ):
     return {
-        "count": rag_service.document_indexer.count_documents()
+        "count": rag_service.document_indexer.store.count_documents()
     }
 
 

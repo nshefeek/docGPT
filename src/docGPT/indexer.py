@@ -40,27 +40,9 @@ class DocumentIndexer:
         """
         Returns the VectorStoreIndex.
         """
+        documents = self.store.get_all_documents()
+
         return VectorStoreIndex.from_documents(
-            documents=self.store.get_all_documents(),
+            documents=documents,
             storage_context=self.storage_context,
         )
-    
-    def search(self, query: str) -> List[Document]:
-        """
-        Searches for documents in the document store.
-        """
-        result = self.get_index().as_query_engine().query(query)
-        return result
-    
-    def count_documents(self) -> int:
-        """
-        Returns the number of documents in the document store.
-        """
-        return len(self.store.get_all_documents())
-    
-
-    def clear(self) -> None:
-        """
-        Clears the index store.
-        """
-        return self.store.clear()

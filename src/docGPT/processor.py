@@ -66,10 +66,9 @@ class DocumentProcessor:
         total = len(documents)
 
         for i, doc in enumerate(documents):
-            # metadata = self._extract_metadata(doc)
-            # metadata["source"] = source
+            metadata = self._extract_metadata(doc)
+            metadata["source"] = source
 
-            page_number = doc.metadata.get("page", None)
             text = doc.text
             paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
 
@@ -80,13 +79,12 @@ class DocumentProcessor:
                     processed_docs.append(
                         Document(
                             text=chunk,
-                        #     metadata={
-                        #         # **metadata,
-                        #         "source": source,
-                        #         "page_number": page_number,
-                        #         "paragraph_number": para_num,
-                        #         "chunk_number": i,
-                        #     }
+                            metadata={
+                                **metadata,
+                                "source": source,
+                                "paragraph_number": para_num + 1,
+                                "chunk_number": i,
+                            }
                         )
                     )
             
@@ -103,9 +101,12 @@ class DocumentProcessor:
         
         lines = doc.text.split("\n")
         if lines:
-            metadata["title"] = lines[0]
+            metadata["title"] = metadata.get("title", lines[0] if lines else "Untitled")
 
+        metadata["page_number"] = metadata.get("source", 0)
         return metadata
+    
+
     
     def get_progress(self, task_id: str) -> dict:
         """

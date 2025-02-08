@@ -24,8 +24,6 @@ async def lifespan(app: FastAPI):
         cache_folder="./model_cache",
     )
 
-    print(settings.LLM_MODEL)
-    
     Settings.llm = LlamaCPP(
         model_path=str(f"{settings.MODEL_PATH}{settings.LLM_MODEL}"),
         max_new_tokens=2048,

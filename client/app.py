@@ -42,7 +42,7 @@ def process_directory(directory_path: str) -> Dict:
 
 def search_documents(query: str, k: int = 4) -> Dict:
     try:
-        response = httpx.post(f"{BACKEND_URL}/search-store", json={"query": query, "k": k})
+        response = httpx.post(f"{BACKEND_URL}/search-store", params={"query": query, "k": k})
         return response
     except httpx.RequestError as e:
         st.error(f"Document search request failed: {str(e)}")

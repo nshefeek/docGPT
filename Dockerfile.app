@@ -8,7 +8,7 @@ COPY /scripts ./
 
 RUN pip install uv
 RUN uv venv .venv
-RUN uv sync --no-group 
+RUN uv sync --no-group client
 
 ENV PATH="/app/.venv/bin:$PATH"
 

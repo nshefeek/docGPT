@@ -16,7 +16,7 @@ from websockets import connect
 from websockets.exceptions import ConnectionClosedError
 
 
-BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000/api")
 WS_URL = os.environ.get("WS_URL", "ws://localhost:8000")
 
 
@@ -42,8 +42,8 @@ def process_directory(directory_path: str) -> Dict:
 
 def search_documents(query: str, k: int = 4) -> Dict:
     try:
-        response = httpx.post(f"{BACKEND_URL}/search", json={"query": query, "k": k})
-        return response.json()
+        response = httpx.post(f"{BACKEND_URL}/search-store", json={"query": query, "k": k})
+        return response
     except httpx.RequestError as e:
         st.error(f"Document search request failed: {str(e)}")
         return {"error": str(e)}
@@ -60,9 +60,7 @@ def get_document_count() -> Dict:
 
 async def ask_question(question: str):
     try:
-        async with connect(
-            f"{WS_URL}/ws/ask", timeout=120, ping_interval=30, ping_timeout=10
-        ) as websocket:
+        async with connect(f"{WS_URL}/ws/ask") as websocket:
             await websocket.send(question)
             while True:
                 response = await websocket.recv()
@@ -71,6 +69,21 @@ async def ask_question(question: str):
         yield {"error": "Question request timed out. Please try again."}
     except ConnectionClosedError:
         yield {"error": "Question connection closed unexpectedly. Please try again."}
+
+async def get_progress(task_id: str):
+    async with connect(f"{WS_URL}/ws/progress") as websocket:
+        await websocket.send(task_id)
+        while True:
+            response = await websocket.recv()
+            progress = response.get("progress", 0)
+            status = response.get("status", "Unknown")
+
+            st.progress(progress/100)
+            st.write(f"Status: {status} - {progress}%")
+
+            if status == "Completed":
+                st.success(f"Document processing completed: {response.get('documents', 0)} documents indexed.")
+                break
 
 
 def main():
@@ -109,7 +122,8 @@ def main():
                     if "error" in result:
                         st.error(result["error"])
                     else:
-                        st.success(result)
+                        st.success("File uploaded successfully!. Checking progress..")
+                        asyncio.run(get_progress(uploaded_file.name))
 
     elif page == "Process Directory":
         st.header("Process Directory")
@@ -124,7 +138,8 @@ def main():
                 if "error" in result:
                     st.error(result["error"])
                 else:
-                    st.success(result)
+                    st.success("DIrectory upload successful!. Checking progress..")
+                    asyncio.run(get_progress(directory_path))
 
     elif page == "Ask Questions":
         st.header("Ask Questions")

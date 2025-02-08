@@ -1,6 +1,5 @@
 import os
 import asyncio
-import logging
 
 from typing import Annotated
 
@@ -9,9 +8,9 @@ from fastapi import APIRouter, UploadFile, HTTPException, Depends, WebSocket, Fi
 
 from docGPT.config import settings
 from docGPT.rag import RAGService
+from docGPT.logger import logger
 
 router = APIRouter()
-logger  = logging.getLogger(__name__)
 
 
 class DirectoryRequest(BaseModel):
@@ -33,6 +32,7 @@ async def ask_question(
     rag_service: RAGServiceDep,
 ):
     try:
+        logger.info(f"Processing question: {query}")
         result = await rag_service.ask_question(query)
         return result
 
@@ -47,6 +47,7 @@ async def upload_file(
     file: UploadFile = File(...),
 ):
     try:
+        logger.info(f"Uploading file: {file.filename}")
         os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
         file_path = os.path.join(settings.UPLOADS_DIR, file.filename)
         with open(file_path, "wb") as f:

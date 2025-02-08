@@ -1,11 +1,9 @@
-from logging import getLogger
 from typing import List, Optional
 
 from llama_index.core import Document
 from llama_index.core import StorageContext, VectorStoreIndex
 
-
-logger = getLogger(__name__)
+from docGPT.logger import logger
 
 
 class DocumentIndexer:

@@ -1,6 +1,3 @@
-import time
-import logging
-
 from typing import List
 
 from llama_index.core import Document
@@ -8,8 +5,7 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.readers import SimpleDirectoryReader
 from llama_index.readers.file import PyMuPDFReader
 
-
-logger = logging.getLogger(__name__)
+from docGPT.logger import logger
 
 
 class DocumentProcessor:

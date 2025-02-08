@@ -12,6 +12,7 @@ from docGPT.rag import RAGService
 from docGPT.store import vector_store
 from docGPT.indexer import DocumentIndexer
 from docGPT.processor import DocumentProcessor
+from docGPT.logger import logger
 
 
 @asynccontextmanager

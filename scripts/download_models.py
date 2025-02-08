@@ -23,7 +23,7 @@ def download_file(url, filename):
 
 
 def ensure_model(model_name, url):
-    model_path = f"./data/{model_name}"
+    model_path = f"./model_cache/{model_name}"
     if not os.path.exists(model_path):
         print(f"Downloading {model_name}...")
         download_file(url, model_path)

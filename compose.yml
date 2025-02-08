@@ -6,11 +6,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/app/data
-      - ./model_cache:/app/model_cache
+      - ./model_cache:/model_cache
     command: >
       sh -c "python download_models.py && 
-            uvicorn docGPT.main:app --host 0.0.0.0 --port 8000 --workers 4 --loop asyncio --log-level info"
+            uvicorn docGPT.main:app --host 0.0.0.0 --port 8000 --reload --loop asyncio --log-level info"
     networks:
       - share-network
     env_file:

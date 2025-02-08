@@ -103,7 +103,7 @@ class RAGService:
         """
         Generates a response to a query using the query engine.
         """
-        response = await query_engine.aquery(query)
+        response = await query_engine.query(query)
         return response
 
     def _parse_response(self, response):

@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 
 from llama_index.core import Document
 from llama_index.core import StorageContext, VectorStoreIndex
@@ -17,18 +17,26 @@ class DocumentIndexer:
         self.store = vector_store
         self.storage_context = StorageContext.from_defaults(vector_store=self.store)
 
-    def create_index(self, documents: List[Document]) -> VectorStoreIndex:
+    def create_index(self, documents: List[Document]) -> Optional[VectorStoreIndex]:
         """
         Creates a VectorStoreIndex from the documents in the document store.
         """
+        if not documents:
+            logger.warning("No documents found to index")
+            return None
+        
         logger.info("Creating index...")
         logger.info(f"Indexing {len(documents)} documents...")
         logger.info(f"Indexing {documents[0].text}")
-        
-        return VectorStoreIndex.from_documents(
-            documents=documents,
-            storage_context=self.storage_context,
-        )
+
+        try:
+            return VectorStoreIndex.from_documents(
+                documents=documents,
+                storage_context=self.storage_context,
+            )
+        except Exception as e:
+            logger.error(f"Error creating index: {e}")
+            return None
 
     def get_index(self) -> VectorStoreIndex:
         """
@@ -43,7 +51,8 @@ class DocumentIndexer:
         """
         Searches for documents in the document store.
         """
-        return self.get_index().query(query)
+        result = self.get_index().as_query_engine().query(query)
+        return result
     
     def count_documents(self) -> int:
         """

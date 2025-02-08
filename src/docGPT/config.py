@@ -1,8 +1,10 @@
 from pydantic_settings import BaseSettings
 
 
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "docGPT"
+    MODEL_PATH: str = "./model_cache/"
     ALLOWED_HOSTS: list = ["*"]
     LLM_MODEL: str
     EMBEDDING_MODEL: str

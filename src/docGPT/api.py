@@ -1,10 +1,11 @@
 import os
+import asyncio
 import logging
 
 from typing import Annotated
 
 from pydantic import BaseModel
-from fastapi import APIRouter, UploadFile, HTTPException, Depends, WebSocket, File, Request
+from fastapi import APIRouter, UploadFile, HTTPException, Depends, WebSocket, File, Request, BackgroundTasks, Body
 
 from docGPT.config import settings
 from docGPT.rag import RAGService
@@ -51,7 +52,8 @@ async def upload_file(
         with open(file_path, "wb") as f:
             f.write(file.file.read())
 
-        await rag_service.index_file(file_path)
+        result = await rag_service.index_file(file_path)
+        return result
     
     except Exception as e:
         logger.error(f"Error uploading file {file.filename}: {e}")
@@ -64,33 +66,34 @@ async def upload_directory(
     directory: DirectoryRequest,
 ):
     directory_path = directory.directory_path
-    
     if not os.path.isdir(directory_path):
         raise HTTPException(status_code=400, detail="Invalid directory path")
 
     try:
-        rag_service.index_directory(directory_path)
+        result = await rag_service.index_directory(directory_path)
+        return result
     
     except Exception as e:
         logger.error(f"Error uploading directory {directory.directory_path}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@router.post("/search")
+@router.post("/search-store")
 async def search_documents(
     query: str,
-    rag_service: RAGServiceDep,
-    k: int = 4,
+    rag_service: RAGServiceDep
 ):
-    return rag_service.document_indexer.search(query, k)
+    result = rag_service.document_indexer.search(query)
+    return result
 
 
-@router.post("/clear-store")
+@router.get("/clear-store")
 async def clear_store(
     rag_service: RAGServiceDep,
 ):
     try:
         rag_service.document_indexer.clear()
+        return {"status": "success"}
     except Exception as e:
         logger.error(f"Error clearing store: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -130,3 +133,15 @@ async def ask_question_streaming(
                     "sources": [],
                     "progress": 1.0
                 })
+
+@router.websocket("/ws/progress")
+async def get_progress(websocket: WebSocket, rag_service: RAGServiceDep):
+    await websocket.accept()
+    task_id = await websocket.receive_text()
+
+    while True:
+        progress = rag_service.document_processor.get_progress(task_id)
+        await websocket.send_json(progress)
+        if progress["status"] == "Completed":
+            break
+        await asyncio.sleep(2)

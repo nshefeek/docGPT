@@ -24,7 +24,7 @@ class RAGService:
         document_indexer: DocumentIndexer,
         document_processor: DocumentProcessor,
         similarity_threshold: float = 0.7,
-        top_k: int = 4,
+        top_k: int = 2,
     ):
         self.document_indexer = document_indexer
         self.document_processor = document_processor
@@ -41,10 +41,11 @@ class RAGService:
             processed_docs = self.document_processor.process_file(file_path)
             self.document_indexer.create_index(processed_docs)
             logger.info(f"Indexing of {file_path} completed.")
+            return {"status": "success", "indexed_documents": len(processed_docs)}
 
         except Exception as e:
             logger.error(f"Error processing file {file_path}: {e}")
-            raise
+            return {"status": "error", "message": str(e)}
 
     async def index_directory(self, directory_path: str) -> VectorStoreIndex:
         """
@@ -52,8 +53,12 @@ class RAGService:
         """
         try:
             processed_docs = self.document_processor.process_directory(directory_path)
+            if not processed_docs:
+                return {"status": "error", "message": f"No documents found in {directory_path}"}
+            
             self.document_indexer.create_index(processed_docs)
             logger.info(f"Indexing of {directory_path} completed.")
+            return {"status": "success", "indexed_documents": len(processed_docs)}
 
         except Exception as e:
             logger.error(f"Error processing directory {directory_path}: {e}")
@@ -65,8 +70,16 @@ class RAGService:
         Asks a question and returns a response with sources.
         """
         try:
+            index = self.document_indexer.get_index()
+
+            if not self.is_question_relevant(query, index):
+                return {
+                    "result": "I'm sorry, I don't know the answer to that question.",
+                    "sources": [],
+                }
+
             retriever = VectorIndexRetriever(
-                index=self.document_indexer.get_index(),
+                index=index,
                 similarity_top_k=self.top_k,
             )
 
@@ -118,11 +131,11 @@ class RAGService:
             response = await self.ask_question(query)
             words = response["result"].split()
 
-            for i in range(0, len(words), 3):
+            for i in range(0, len(words), 5):
                 partial_response = {
-                    "result": " ".join(words[:i+3]),
-                    "sources": response["sources"] if i + 3 >= len(words) else [],
-                    "progress": min(1.0, (i + 3) / len(words)),
+                    "result": " ".join(words[:i+5]),
+                    "sources": response["sources"] if i + 5>= len(words) else [],
+                    "progress": min(1.0, (i + 5) / len(words)),
                 }
                 yield partial_response
 
@@ -133,3 +146,13 @@ class RAGService:
                 "sources": [],
                 "progress": 1.0
             }
+
+    @staticmethod
+    def is_question_relevant(query: str, index: VectorStoreIndex, threshold: float = 0.7) -> bool:
+        """
+        Checks if a question is relevant to the index.
+        """
+        retriever = VectorIndexRetriever(index=index, similarity_top_k=5)
+        responses = retriever.retrieve(query)
+
+        return any(response.score >= threshold for response in responses)

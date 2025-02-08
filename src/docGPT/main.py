@@ -23,13 +23,15 @@ async def lifespan(app: FastAPI):
         cache_folder="./model_cache",
     )
 
+    print(settings.LLM_MODEL)
+    
     Settings.llm = LlamaCPP(
-        model_path=settings.LLM_MODEL,
+        model_path=str(f"{settings.MODEL_PATH}{settings.LLM_MODEL}"),
         max_new_tokens=2048,
+        context_window=4096,
         temperature=0.7,
     )
-
-    Settings.chunk_size = 2048
+    Settings.chunk_size = 4096
     Settings.chunk_overlap = 200
 
     rag_service = RAGService(

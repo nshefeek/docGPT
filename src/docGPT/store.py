@@ -24,7 +24,7 @@ class ElasticSearchStore(ElasticsearchStore):
             documents.append(Document(text=doc_text, metadata=metadata))
 
         return documents
-
+    
     def clear(self) -> None:
         from elasticsearch import Elasticsearch
 

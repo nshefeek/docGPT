@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     MODEL_PATH: str = "./model_cache/"
     ALLOWED_HOSTS: list = ["*"]
     LLM_MODEL: str
+    LLM_MODEL_URL: str
     EMBEDDING_MODEL: str
     UPLOADS_DIR: str
     DATABASE_NAME: str

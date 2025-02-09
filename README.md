@@ -21,7 +21,7 @@ docker-compose up --build -d
 ```
 
 4. Access the application:
-- FastAPI backend: `http://localhost:8000`
+- FastAPI backend: `http://localhost:8000/api`
 - Streamlit frontend: `http://localhost:8501`
 
 ## Usage
@@ -33,11 +33,12 @@ docker-compose up --build -d
 
 ## API Endpoints
 
-- `/ask` (POST): Ask a question about the uploaded documents.
-- `/upload` (POST): Upload a single document file.
-- `/process-directory` (POST): Process a directory of documents.
-- `/search` (POST): Search for documents based on a query.
-- `/clear` (POST): Clear the document store.
+- `/ask-question` (POST): Ask a question about the uploaded documents.
+- `/upload/file` (POST): Upload a single document file.
+- `/upload/directory` (POST): Process a directory of documents.
+- `/search-store` (POST): Search for documents based on a query.
+- `/clear-store` (POST): Clear the document store.
+- `/document-count` (GET): Get the document counts
 
 For detailed information on the request and response formats, refer to the API documentation.
 

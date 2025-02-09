@@ -71,7 +71,7 @@ class RAGService:
         try:
             # index = self.document_indexer.get_index()
 
-            retrieved_docs = self.document_indexer.store.search(query)
+            retrieved_docs = self.document_indexer.store.search(query, k=10)
 
             llama_docs = [
                 Document(text=doc.text, metadata={key: doc.metadata[key] for key in ["source", "page_number", "paragraph_number"]}) for doc in retrieved_docs

@@ -23,8 +23,8 @@ class RAGService:
         self,
         document_indexer: DocumentIndexer,
         document_processor: DocumentProcessor,
-        similarity_threshold: float = 0.7,
-        top_k: int = 2,
+        similarity_threshold: float = 0.9,
+        top_k: int = 1,
     ):
         self.document_indexer = document_indexer
         self.document_processor = document_processor
@@ -65,7 +65,7 @@ class RAGService:
             raise
 
 
-    async def ask_question(self, query: str):
+    async def ask_question(self, query: str) -> Dict:
         """
         Asks a question and returns a response with sources.
         """
@@ -140,26 +140,26 @@ class RAGService:
             ]
         }
 
-    async def stream_response(self, query: str) -> AsyncGenerator[Dict[str, Any], None]:
-        """
-        Streams a response with sources.
-        """
-        try:
-            response = await self.ask_question(query)
-            words = response["result"].split()
+    # async def stream_response(self, query: str) -> AsyncGenerator[Dict[str, Any], None]:
+    #     """
+    #     Streams a response with sources.
+    #     """
+    #     try:
+    #         response = await self.ask_question(query)
+    #         words = response["result"].split()
 
-            for i in range(0, len(words), 5):
-                partial_response = {
-                    "result": " ".join(words[:i+5]),
-                    "sources": response["sources"] if i + 5>= len(words) else [],
-                    "progress": min(1.0, (i + 5) / len(words)),
-                }
-                yield partial_response
+    #         for i in range(0, len(words), 5):
+    #             partial_response = {
+    #                 "result": " ".join(words[:i+5]),
+    #                 "sources": response["sources"] if i + 5>= len(words) else [],
+    #                 "progress": min(1.0, (i + 5) / len(words)),
+    #             }
+    #             yield partial_response
 
-        except Exception as e:
-            logging.error(f"Error streaming response: {e}")
-            yield {
-                "result": str(e),
-                "sources": [],
-                "progress": 1.0
-            }
+    #     except Exception as e:
+    #         logging.error(f"Error streaming response: {e}")
+    #         yield {
+    #             "result": str(e),
+    #             "sources": [],
+    #             "progress": 1.0
+    #         }

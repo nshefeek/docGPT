@@ -34,8 +34,11 @@ services:
       - xpack.security.enabled=false
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    command: >
+      /bin/bash -c " /usr/share/elasticsearch/bin/elasticsearch & sleep 20 && bash /usr/share/elasticsearch/init-index.sh && tail -f /dev/null"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+      - ./scripts/init-index.sh:/usr/share/elasticsearch/init-index.sh
     networks:
       - share-network
     healthcheck:

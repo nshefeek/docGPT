@@ -14,6 +14,7 @@ class DocumentIndexer:
     def __init__(self, vector_store):
         self.store = vector_store
         self.storage_context = StorageContext.from_defaults(vector_store=self.store)
+        self._index = None
 
     def create_index(self, documents: List[Document]) -> Optional[VectorStoreIndex]:
         """
@@ -28,10 +29,11 @@ class DocumentIndexer:
         logger.info(f"Indexing {documents[0].text}")
 
         try:
-            return VectorStoreIndex.from_documents(
+            self._index = VectorStoreIndex.from_documents(
                 documents=documents,
                 storage_context=self.storage_context,
             )
+            return self._index
         except Exception as e:
             logger.error(f"Error creating index: {e}")
             return None
@@ -40,9 +42,14 @@ class DocumentIndexer:
         """
         Returns the VectorStoreIndex.
         """
-        documents = self.store.get_all_documents()
 
-        return VectorStoreIndex.from_documents(
-            documents=documents,
-            storage_context=self.storage_context,
-        )
+        if self._index is None:
+            logger.warning("Creating new index...")
+
+            documents = self.store.get_all_documents()
+            self._index = VectorStoreIndex.from_documents(
+                documents=documents,
+                storage_context=self.storage_context,
+            )
+
+        return self._index

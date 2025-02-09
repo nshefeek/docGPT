@@ -9,11 +9,9 @@ import asyncio
 import streamlit as st
 import httpx
 import os
-import websockets
 
 from typing import Dict
 from websockets import connect
-from websockets.exceptions import ConnectionClosedError
 
 
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000/api")
@@ -58,17 +56,28 @@ def get_document_count() -> Dict:
         return {"error": str(e)}
 
 
-async def ask_question(question: str):
+# async def ask_question(question: str):
+#     try:
+#         async with connect(f"{WS_URL}/ws/ask") as websocket:
+#             await websocket.send(question)
+#             while True:
+#                 response = await websocket.recv()
+#                 yield response
+#     except asyncio.TimeoutError:
+#         yield {"error": "Question request timed out. Please try again."}
+#     except ConnectionClosedError:
+#         yield {"error": "Question connection closed unexpectedly. Please try again."}
+
+def ask_question(question: str):
     try:
-        async with connect(f"{WS_URL}/ws/ask") as websocket:
-            await websocket.send(question)
-            while True:
-                response = await websocket.recv()
-                yield response
-    except asyncio.TimeoutError:
-        yield {"error": "Question request timed out. Please try again."}
-    except ConnectionClosedError:
-        yield {"error": "Question connection closed unexpectedly. Please try again."}
+        response = httpx.post(f"{BACKEND_URL}/ask-question", params={"query": question, "streaming": "true"})
+        for line in response.iter_lines():
+            if line:
+                yield line.replace("data: ", "")
+
+    except httpx.RequestError as e:
+        st.error(f"Question request failed: {str(e)}")
+        yield {"error": str(e)}
 
 async def get_progress(task_id: str):
     async with connect(f"{WS_URL}/ws/progress") as websocket:
@@ -149,59 +158,39 @@ def main():
         if ask_button:
             answer_container = st.empty()
             sources_container = st.expander("Sources", expanded=False)
-            elapsed_time_container = st.empty()
+            # elapsed_time_container = st.empty()
+            progress_bar = st.progress(0)
 
-            async def stream_answer():
+            def handle_streaming():
+
                 full_answer = ""
-                start_time = asyncio.get_event_loop().time()
-                try:
-                    async with connect(f"{WS_URL}/ws/ask", timeout=120) as websocket:
-                        await websocket.send(question)
-                        while True:
-                            try:
-                                response = await asyncio.wait_for(
-                                    websocket.recv(), timeout=0.1
-                                )
-                                response = eval(response)  # Convert string to dict
-                                if "error" in response:
-                                    answer_container.error(response["error"])
-                                    break
-                                else:
-                                    full_answer = response["result"]
-                                    answer_container.markdown(full_answer)
-                                    if response.get("sources"):
-                                        sources_container.json(response["sources"])
-                                        break
+                # start_time = asyncio.get_event_loop().time()
 
-                                # Update elapsed time
-                                elapsed_time = (
-                                    asyncio.get_event_loop().time() - start_time
-                                )
-                                elapsed_time_container.text(
-                                    f"Elapsed time: {elapsed_time:.2f} seconds"
-                                )
+                for chunk in ask_question(question):
+                    try:
+                        response_json = eval(chunk)
+                        result_text = response_json.json("result", "")
+                        sources = response_json.json("sources", [])
+                        progress = response_json.json("progress", 0.0)
 
-                            except asyncio.TimeoutError:
-                                # This allows us to update the elapsed time while waiting for the next chunk
-                                elapsed_time = (
-                                    asyncio.get_event_loop().time() - start_time
-                                )
-                                elapsed_time_container.text(
-                                    f"Elapsed time: {elapsed_time:.2f} seconds"
-                                )
-                            except websockets.exceptions.ConnectionClosedError:
-                                break
-                except Exception as e:
-                    answer_container.error(f"An error occurred: {str(e)}")
-                finally:
-                    # Display final elapsed time
-                    elapsed_time = asyncio.get_event_loop().time() - start_time
-                    elapsed_time_container.text(
-                        f"Total response time: {elapsed_time:.2f} seconds"
-                    )
+                        full_answer += result_text
+                        answer_container.write(result_text)
+                        sources_container.json(sources)
+                        progress_bar.progress(progress)
 
-            with st.spinner("Preparing answer..."):
-                asyncio.run(stream_answer())
+                        # end_time = asyncio.get_event_loop().time()
+                        # elapsed_time = end_time - start_time
+                        # elapsed_time_container.write(f"Elapsed Time: {elapsed_time:.2f} seconds")
+
+                        if progress == 1.0 and sources:
+                            sources_container.json(sources)
+
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+                        break
+
+            handle_streaming()
+
 
     elif page == "Search Documents":
         st.header("Search Documents")
@@ -211,13 +200,14 @@ def main():
 
         if search_button:
             results = search_documents(query, k)
-            if isinstance(results, list):
-                for i, result in enumerate(results, 1):
+            try:
+                for i, result in enumerate(results.json()):
                     st.subheader(f"Result {i}")
-                    st.write(result["content"])
-                    st.json(result["metadata"])
-            else:
+                    st.write(result["text"])
+                    st.json(result["extra_info"])
+            except Exception as e:
                 st.error("An error occurred during the search.")
+                raise e
 
 
 if __name__ == "__main__":

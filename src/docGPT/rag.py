@@ -69,13 +69,13 @@ class RAGService:
         Asks a question and returns a response with sources.
         """
         try:
-            index = self.document_indexer.get_index()
+            # index = self.document_indexer.get_index()
 
-            # retrieved_docs = self.document_indexer.store.search(query)
+            retrieved_docs = self.document_indexer.store.search(query)
 
-            # llama_docs = [
-            #     Document(text=doc.text, metadata={key: doc.metadata[key] for key in ["source", "page_number", "paragraph_number"]}) for doc in retrieved_docs
-            # ]
+            llama_docs = [
+                Document(text=doc.text, metadata={key: doc.metadata[key] for key in ["source", "page_number", "paragraph_number"]}) for doc in retrieved_docs
+            ]
 
             # if not llama_docs:
             #     return {
@@ -97,10 +97,10 @@ class RAGService:
             #     num_chunks=1000,
             # )
 
-            # index = VectorStoreIndex.from_documents(
-            #     documents=llama_docs,
-            #     storage_context=self.document_indexer.storage_context,
-            # )
+            index = VectorStoreIndex.from_documents(
+                documents=llama_docs,
+                storage_context=self.document_indexer.storage_context,
+            )
 
             retriever = VectorIndexRetriever(
                 index=index,

@@ -81,13 +81,12 @@ class DocumentProcessor:
                             text=chunk,
                             metadata={
                                 **metadata,
-                                "source": source,
                                 "paragraph_number": para_num + 1,
                                 "chunk_number": i,
                             }
                         )
                     )
-            
+
             progress = int((i + 1) / total * 100)
             self.progress[source] = {"status": "Processing", "progress": progress}
 
@@ -104,6 +103,7 @@ class DocumentProcessor:
             metadata["title"] = metadata.get("title", lines[0] if lines else "Untitled")
 
         metadata["page_number"] = metadata.get("source", 0)
+        metadata["file_path"] = metadata.get("file_path", "")
         return metadata
     
 

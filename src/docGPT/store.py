@@ -25,7 +25,7 @@ class ElasticSearchStore(ElasticsearchStore):
         """
         Cleans metadata to avoid duplication of metadata in the document.
         """
-        allowed_keys = {"title", "source", "page_number", "paragraph_number", "chunk_number"}
+        allowed_keys = {"title", "source", "file_path", "page_number", "paragraph_number", "chunk_number"}
         cleaned_metadata = {k: v for k, v in metadata.items() if k in allowed_keys}
         return cleaned_metadata
     

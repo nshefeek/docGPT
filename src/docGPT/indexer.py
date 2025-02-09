@@ -44,12 +44,10 @@ class DocumentIndexer:
         """
 
         if self._index is None:
-            logger.warning("Creating new index...")
-
-            documents = self.store.get_all_documents()
-            self._index = VectorStoreIndex.from_documents(
-                documents=documents,
+            self._index = VectorStoreIndex.from_vector_store(
+                vector_store=self.store,
                 storage_context=self.storage_context,
+                retrieval_strategy="hybrid",
             )
 
         return self._index
